@@ -65,12 +65,19 @@ class VideoStreamTrack(MediaStreamTrack):
         self.running = True
 
         # Create a data channel for sending frame metadata
-        self.data_channel = pc.createDataChannel("frame_metadata")
-        self.data_channel_open = asyncio.Event()
-        self.data_channel.on("open", self.on_data_channel_open)
+        try:
+            self.data_channel = pc.createDataChannel("frame_metadata")
+            self.data_channel.on("open", self.on_data_channel_open)
+            self.data_channel.on("close", self.on_data_channel_close)
+            self.data_channel.on("error", self.on_data_channel_error)
+            logger.info(
+                f"Created data channel for frame metadata, initial state: {self.data_channel.readyState}")
+        except Exception as e:
+            logger.error(f"Failed to create data channel: {str(e)}")
+            self.data_channel = None
 
-        # Start frame collection after data channel is open
-        self.collect_task = asyncio.create_task(self.wait_and_collect_frames())
+        # Start frame collection immediately, don't wait for data channel
+        self.collect_task = asyncio.create_task(self.collect_frames())
 
         # Add cleanup when track ends
         @track.on("ended")
@@ -80,12 +87,12 @@ class VideoStreamTrack(MediaStreamTrack):
 
     def on_data_channel_open(self):
         logger.info("Frame metadata data channel opened")
-        self.data_channel_open.set()
 
-    async def wait_and_collect_frames(self):
-        """Wait for data channel to open before starting frame collection."""
-        await self.data_channel_open.wait()
-        await self.collect_frames()
+    def on_data_channel_close(self):
+        logger.info("Frame metadata data channel closed")
+
+    def on_data_channel_error(self, error):
+        logger.error(f"Frame metadata data channel error: {error}")
 
     async def collect_frames(self):
         """Collect video frames from the underlying track and pass them to
@@ -98,8 +105,8 @@ class VideoStreamTrack(MediaStreamTrack):
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
 
-                    # Send frame metadata as JSON if data channel is open
-                    if self.data_channel.readyState == "open":
+                    # Send frame metadata as JSON if data channel exists and is open
+                    if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
                             "frame_number": frame_count,
                             "timestamp": time.time(),
@@ -107,6 +114,10 @@ class VideoStreamTrack(MediaStreamTrack):
                             "height": frame.height
                         }
                         self.data_channel.send(json.dumps(metadata))
+                    elif frame_count % 100 == 0 and self.data_channel:
+                        # Log data channel state periodically for debugging
+                        logger.info(
+                            f"Data channel state: {self.data_channel.readyState} (frame {frame_count})")
 
                     frame_count += 1
                 except asyncio.CancelledError:
@@ -243,13 +254,28 @@ async def offer(request):
 
     ice_servers = get_ice_servers()
     if len(ice_servers) > 0:
+        logger.info(f"Using ICE servers: {ice_servers}")
         pc = RTCPeerConnection(
             configuration=RTCConfiguration(iceServers=get_ice_servers())
         )
     else:
+        logger.info("No ICE servers found, using default configuration")
         pc = RTCPeerConnection()
 
     logger.info(f"Creating new peer connection {id(pc)}")
+
+    # Add event handlers to track connection state
+    @pc.on("icegatheringstatechange")
+    def on_icegatheringstatechange():
+        logger.info(f"ICE gathering state is: {pc.iceGatheringState}")
+
+    @pc.on("iceconnectionstatechange")
+    def on_iceconnectionstatechange():
+        logger.info(f"ICE connection state is: {pc.iceConnectionState}")
+
+    @pc.on("signalingstatechange")
+    def on_signalingstatechange():
+        logger.info(f"Signaling state is: {pc.signalingState}")
 
     pcs.add(pc)
 
@@ -270,7 +296,17 @@ async def offer(request):
     # Handle control channel from client
     @pc.on("datachannel")
     def on_datachannel(channel):
+        logger.info(f"Data channel received from client: {channel.label}")
         if channel.label == "control":
+            logger.info("Control channel established")
+
+            @channel.on("open")
+            def on_open():
+                logger.info("Control channel opened")
+
+            @channel.on("close")
+            def on_close():
+                logger.info("Control channel closed")
 
             @channel.on("message")
             async def on_message(message):
