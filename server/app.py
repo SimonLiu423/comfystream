@@ -63,11 +63,14 @@ class VideoStreamTrack(MediaStreamTrack):
             metrics_manager=app["metrics_manager"], track_id=track.id
         )
         self.running = True
-        self.collect_task = asyncio.create_task(self.collect_frames())
 
         # Create a data channel for sending frame metadata
         self.data_channel = pc.createDataChannel("frame_metadata")
+        self.data_channel_open = asyncio.Event()
         self.data_channel.on("open", self.on_data_channel_open)
+
+        # Start frame collection after data channel is open
+        self.collect_task = asyncio.create_task(self.wait_and_collect_frames())
 
         # Add cleanup when track ends
         @track.on("ended")
@@ -77,6 +80,12 @@ class VideoStreamTrack(MediaStreamTrack):
 
     def on_data_channel_open(self):
         logger.info("Frame metadata data channel opened")
+        self.data_channel_open.set()
+
+    async def wait_and_collect_frames(self):
+        """Wait for data channel to open before starting frame collection."""
+        await self.data_channel_open.wait()
+        await self.collect_frames()
 
     async def collect_frames(self):
         """Collect video frames from the underlying track and pass them to
