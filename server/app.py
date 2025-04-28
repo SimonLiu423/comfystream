@@ -48,12 +48,13 @@ class VideoStreamTrack(MediaStreamTrack):
 
     kind = "video"
 
-    def __init__(self, track: MediaStreamTrack, pipeline: Pipeline):
+    def __init__(self, track: MediaStreamTrack, pipeline: Pipeline, pc: RTCPeerConnection):
         """Initialize the VideoStreamTrack.
 
         Args:
             track: The underlying media stream track.
             pipeline: The processing pipeline to apply to each video frame.
+            pc: The peer connection to create data channel on.
         """
         super().__init__()
         self.track = track
@@ -63,22 +64,42 @@ class VideoStreamTrack(MediaStreamTrack):
         )
         self.running = True
         self.collect_task = asyncio.create_task(self.collect_frames())
-        
+
+        # Create a data channel for sending frame metadata
+        self.data_channel = pc.createDataChannel("frame_metadata")
+        self.data_channel.on("open", self.on_data_channel_open)
+
         # Add cleanup when track ends
         @track.on("ended")
         async def on_ended():
             logger.info("Source video track ended, stopping collection")
             await cancel_collect_frames(self)
 
+    def on_data_channel_open(self):
+        logger.info("Frame metadata data channel opened")
+
     async def collect_frames(self):
         """Collect video frames from the underlying track and pass them to
         the processing pipeline. Stops when track ends or connection closes.
         """
         try:
+            frame_count = 0
             while self.running:
                 try:
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
+
+                    # Send frame metadata as JSON if data channel is open
+                    if self.data_channel.readyState == "open":
+                        metadata = {
+                            "frame_number": frame_count,
+                            "timestamp": time.time(),
+                            "width": frame.width,
+                            "height": frame.height
+                        }
+                        self.data_channel.send(json.dumps(metadata))
+
+                    frame_count += 1
                 except asyncio.CancelledError:
                     logger.info("Frame collection cancelled")
                     break
@@ -89,7 +110,7 @@ class VideoStreamTrack(MediaStreamTrack):
                         logger.error(f"Error collecting video frames: {str(e)}")
                     self.running = False
                     break
-            
+
             # Perform cleanup outside the exception handler
             logger.info("Video frame collection stopped")
         except asyncio.CancelledError:
@@ -120,7 +141,7 @@ class AudioStreamTrack(MediaStreamTrack):
         self.pipeline = pipeline
         self.running = True
         self.collect_task = asyncio.create_task(self.collect_frames())
-        
+
         # Add cleanup when track ends
         @track.on("ended")
         async def on_ended():
@@ -146,7 +167,7 @@ class AudioStreamTrack(MediaStreamTrack):
                         logger.error(f"Error collecting audio frames: {str(e)}")
                     self.running = False
                     break
-            
+
             # Perform cleanup outside the exception handler
             logger.info("Audio frame collection stopped")
         except asyncio.CancelledError:
@@ -219,12 +240,11 @@ async def offer(request):
     else:
         pc = RTCPeerConnection()
 
+    logger.info(f"Creating new peer connection {id(pc)}")
+
     pcs.add(pc)
 
     tracks = {"video": None, "audio": None}
-    
-    # Flag to track if we've received resolution update
-    resolution_received = {"value": False}
 
     # Only add video transceiver if video is present in the offer
     if "m=video" in offer.sdp:
@@ -261,27 +281,6 @@ async def offer(request):
                         await pipeline.update_prompts(params["prompts"])
                         response = {"type": "prompts_updated", "success": True}
                         channel.send(json.dumps(response))
-                    elif params.get("type") == "update_resolution":
-                        if "width" not in params or "height" not in params:
-                            logger.warning("[Control] Missing width or height in update_resolution message")
-                            return
-                        # Update pipeline resolution for future frames
-                        pipeline.width = params["width"]
-                        pipeline.height = params["height"]
-                        logger.info(f"[Control] Updated resolution to {params['width']}x{params['height']}")
-                        
-                        # Mark that we've received resolution
-                        resolution_received["value"] = True
-                        
-                        # Warm the video pipeline with the new resolution
-                        if "m=video" in pc.remoteDescription.sdp:
-                            await pipeline.warm_video()
-                            
-                        response = {
-                            "type": "resolution_updated",
-                            "success": True
-                        }
-                        channel.send(json.dumps(response))
                     else:
                         logger.warning(
                             "[Server] Invalid message format - missing required fields"
@@ -295,7 +294,7 @@ async def offer(request):
     def on_track(track):
         logger.info(f"Track received: {track.kind}")
         if track.kind == "video":
-            videoTrack = VideoStreamTrack(track, pipeline)
+            videoTrack = VideoStreamTrack(track, pipeline, pc)
             tracks["video"] = videoTrack
             sender = pc.addTrack(videoTrack)
 
@@ -327,11 +326,10 @@ async def offer(request):
 
     await pc.setRemoteDescription(offer)
 
-    # Only warm audio here, video warming happens after resolution update
     if "m=audio" in pc.remoteDescription.sdp:
         await pipeline.warm_audio()
-    
-    # We no longer warm video here - it will be warmed after receiving resolution
+    if "m=video" in pc.remoteDescription.sdp:
+        await pipeline.warm_video()
 
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
@@ -343,6 +341,7 @@ async def offer(request):
         ),
     )
 
+
 async def cancel_collect_frames(track):
     track.running = False
     if hasattr(track, 'collect_task') is not None and not track.collect_task.done():
@@ -351,6 +350,7 @@ async def cancel_collect_frames(track):
             await track.collect_task
         except (asyncio.CancelledError):
             pass
+
 
 async def set_prompt(request):
     pipeline = request.app["pipeline"]
@@ -370,13 +370,7 @@ async def on_startup(app: web.Application):
         patch_loop_datagram(app["media_ports"])
 
     app["pipeline"] = Pipeline(
-        width=512,
-        height=512,
-        cwd=app["workspace"], 
-        disable_cuda_malloc=True, 
-        gpu_only=True, 
-        preview_method='none',
-        comfyui_inference_log_level=app.get("comfui_inference_log_level", None),
+        cwd=app["workspace"], disable_cuda_malloc=True, gpu_only=True, preview_method='none'
     )
     app["pcs"] = set()
     app["video_tracks"] = {}
@@ -416,18 +410,6 @@ if __name__ == "__main__":
         default=False,
         action="store_true",
         help="Include stream ID as a label in Prometheus metrics.",
-    )
-    parser.add_argument(
-        "--comfyui-log-level",
-        default=None,
-        choices=logging._nameToLevel.keys(),
-        help="Set the global logging level for ComfyUI",
-    )
-    parser.add_argument(
-        "--comfyui-inference-log-level",
-        default=None,
-        choices=logging._nameToLevel.keys(),
-        help="Set the logging level for ComfyUI inference",
     )
     args = parser.parse_args()
 
@@ -477,12 +459,5 @@ if __name__ == "__main__":
     def force_print(*args, **kwargs):
         print(*args, **kwargs, flush=True)
         sys.stdout.flush()
-
-    # Allow overriding of ComyfUI log levels.
-    if args.comfyui_log_level:
-        log_level = logging._nameToLevel.get(args.comfyui_log_level.upper())
-        logging.getLogger("comfy").setLevel(log_level)
-    if args.comfyui_inference_log_level:
-        app["comfui_inference_log_level"] = args.comfyui_inference_log_level
 
     web.run_app(app, host=args.host, port=int(args.port), print=force_print)
