@@ -28,7 +28,7 @@ with mp_pose.Pose(
             print("Ignoring empty camera frame.")
             # If loading a video, use 'break' instead of 'continue'.
             continue
-
+        
         # Flip the image horizontally for a later selfie-view display, and
         # convert the BGR image to RGB.
         image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
@@ -62,7 +62,7 @@ with mp_pose.Pose(
                     target = Pose(results.pose_landmarks.landmark, 1000)
         else:
             if results.pose_landmarks:
-                result = isMatchPose(image, target)
+                result = isMatchPose(image)
                 if result == True:
                     print("Success")
                 else:

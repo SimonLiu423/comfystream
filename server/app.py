@@ -106,7 +106,7 @@ class VideoStreamTrack(MediaStreamTrack):
                 try:
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
-
+                    isMatchPose(frame)
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
@@ -179,7 +179,6 @@ class AudioStreamTrack(MediaStreamTrack):
                 try:
                     frame = await self.track.recv()
                     await self.pipeline.put_audio_frame(frame)
-                    isMatchPose(frame)
                 except asyncio.CancelledError:
                     logger.info("Audio frame collection cancelled")
                     break

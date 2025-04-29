@@ -2,14 +2,14 @@ import math
 import cv2
 import numpy as np
 import mediapipe as mp
-import time
-import pickle
 
-from mediapipe.framework.formats import landmark_pb2
+from pose_detect_by_image import getTargetLandmarks
+
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
-
+default_target = None
+ 
 class Pose():
     def __init__(self, landmarks, threshold):
         self.__data = landmarks
@@ -131,7 +131,15 @@ class Pose():
             return True
         return False
 
-def isMatchPose(frame, target):
+target_landmarks = getTargetLandmarks('./server/tsuyu.jpg')
+if target_landmarks:
+    default_target = Pose(target_landmarks, 1000)
+   
+   
+def isMatchPose(frame, target=default_target):
+    if target == None:
+        print("target is Nonetype")
+        return False
     # To improve performance, optionally mark the image as not writeable
     # to pass by reference.
     # frame.flags.writeable = False
