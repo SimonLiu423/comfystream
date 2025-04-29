@@ -7,6 +7,8 @@ import sys
 
 import torch
 
+from pose import Pose, isMatchPose
+
 # Initialize CUDA before any other imports to prevent core dump.
 if torch.cuda.is_available():
     torch.cuda.init()
@@ -136,6 +138,7 @@ class AudioStreamTrack(MediaStreamTrack):
                 try:
                     frame = await self.track.recv()
                     await self.pipeline.put_audio_frame(frame)
+                    isMatchPose(frame)
                 except asyncio.CancelledError:
                     logger.info("Audio frame collection cancelled")
                     break
