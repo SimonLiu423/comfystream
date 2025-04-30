@@ -118,7 +118,7 @@ class VideoStreamTrack(MediaStreamTrack):
                             "pose_match": pose_match
                         }
                         self.data_channel.send(json.dumps(metadata))
-                    elif frame_count % 100 == 0:
+                    if frame_count % 100 == 0:
                         # Log data channel state periodically for debugging
                         logger.info(
                             f"Data channel state: {self.data_channel.readyState} (frame {frame_count})")
