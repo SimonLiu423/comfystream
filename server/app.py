@@ -321,6 +321,7 @@ async def offer(request):
 
             @channel.on("message")
             async def on_message(message):
+                logger.info(f"Control channel received message: {message}")
                 try:
                     params = json.loads(message)
 
