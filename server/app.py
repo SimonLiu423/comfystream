@@ -69,10 +69,6 @@ class VideoStreamTrack(MediaStreamTrack):
         # Create a data channel for sending frame metadata
         try:
             self.data_channel = pc.createDataChannel("frame_metadata")
-            # self.data_channel.on("open", self.on_data_channel_open)
-            # self.data_channel.on("close", self.on_data_channel_close)
-            # self.data_channel.on("error", self.on_data_channel_error)
-            # self.data_channel.on("message", self.on_data_channel_message)
             logger.info(
                 f"Created data channel for frame metadata, initial state: {self.data_channel.readyState}")
         except Exception as e:
@@ -87,18 +83,6 @@ class VideoStreamTrack(MediaStreamTrack):
         async def on_ended():
             logger.info("Source video track ended, stopping collection")
             await cancel_collect_frames(self)
-
-    def on_data_channel_open(self):
-        logger.info("Frame metadata data channel opened")
-
-    def on_data_channel_close(self):
-        logger.info("Frame metadata data channel closed")
-
-    def on_data_channel_error(self, error):
-        logger.error(f"Frame metadata data channel error: {error}")
-
-    def on_data_channel_message(self, message):
-        logger.info(f"Received message: {message}")
 
     async def collect_frames(self):
         """Collect video frames from the underlying track and pass them to
@@ -319,7 +303,7 @@ async def offer(request):
             def on_message(message):
                 logger.info(f"Frame metadata channel received message: {message}")
 
-        if channel.label == "control":
+        elif channel.label == "control":
             logger.info("Control channel established")
 
             @channel.on("open")
