@@ -50,7 +50,9 @@ class VideoStreamTrack(MediaStreamTrack):
 
     kind = "video"
 
-    def __init__(self, track: MediaStreamTrack, pipeline: Pipeline, pc: RTCPeerConnection):
+    def __init__(
+            self, track: MediaStreamTrack, pipeline: Pipeline, pc: RTCPeerConnection,
+            pose_targets: list):
         """Initialize the VideoStreamTrack.
 
         Args:
@@ -65,7 +67,7 @@ class VideoStreamTrack(MediaStreamTrack):
             metrics_manager=app["metrics_manager"], track_id=track.id
         )
         self.running = True
-
+        self.pose_targets = pose_targets
         # Create a data channel for sending frame metadata
         try:
             self.data_channel = pc.createDataChannel("frame_metadata")
@@ -95,6 +97,7 @@ class VideoStreamTrack(MediaStreamTrack):
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
                     pose_match = isMatchPose(frame)
+                    logger.info(f"Pose targets: {self.pose_targets}")
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
@@ -231,6 +234,7 @@ def get_ice_servers():
 async def offer(request):
     pipeline = request.app["pipeline"]
     pcs = request.app["pcs"]
+    pose_targets = request.app["pose_targets"]
 
     params = await request.json()
 
@@ -265,6 +269,7 @@ async def offer(request):
         logger.info(f"Signaling state is: {pc.signalingState}")
 
     pcs.add(pc)
+    pose_targets[id(pc)] = []
 
     tracks = {"video": None, "audio": None}
 
@@ -332,6 +337,10 @@ async def offer(request):
                         await pipeline.update_prompts(params["prompts"])
                         response = {"type": "prompts_updated", "success": True}
                         channel.send(json.dumps(response))
+                    elif params.get("type") == "set_pose_targets":
+                        pose_targets[id(pc)] = json.loads(params["pose_targets"])
+                        response = {"type": "pose_targets_set", "success": True}
+                        channel.send(json.dumps(response))
                     else:
                         logger.warning(
                             "[Server] Invalid message format - missing required fields"
@@ -345,7 +354,7 @@ async def offer(request):
     def on_track(track):
         logger.info(f"Track received: {track.kind}")
         if track.kind == "video":
-            videoTrack = VideoStreamTrack(track, pipeline, pc)
+            videoTrack = VideoStreamTrack(track, pipeline, pc, pose_targets[id(pc)])
             tracks["video"] = videoTrack
             sender = pc.addTrack(videoTrack)
 
@@ -420,6 +429,7 @@ async def on_startup(app: web.Application):
     if app["media_ports"]:
         patch_loop_datagram(app["media_ports"])
 
+    app["pose_targets"] = dict()
     app["pipeline"] = Pipeline(
         cwd=app["workspace"], disable_cuda_malloc=True, gpu_only=True, preview_method='none'
     )
