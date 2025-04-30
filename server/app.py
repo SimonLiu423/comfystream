@@ -7,7 +7,7 @@ import sys
 
 import torch
 
-from pose import Pose, isMatchPose
+from utils import isMatchPose
 
 # Initialize CUDA before any other imports to prevent core dump.
 if torch.cuda.is_available():
