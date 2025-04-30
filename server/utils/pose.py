@@ -131,10 +131,17 @@ class Pose():
         return False
 
 
-target_landmarks = getTargetLandmarks('./test.png')
+target_landmarks = getTargetLandmarks('./server/tsuyu.jpg')
 if target_landmarks:
     default_target = Pose(target_landmarks, 1000)
-
+    
+target_paths = ['./server/tsuyu.jpg', './server/littleLeaf.jpg', './server/bigLeaf.jpg']
+default_targets = []
+for target_path in target_paths:
+    target_landmarks = getTargetLandmarks(target_path)
+    if target_landmarks:
+        target = Pose(target_landmarks, 1000)
+        default_targets.append(target)
 
 def isMatchPose(frame, target=default_target):
     if target == None:
@@ -154,3 +161,23 @@ def isMatchPose(frame, target=default_target):
         if user.isMatch(target):
             return True
     return False
+
+def matchPoseId(frame, targets=default_targets):
+    frame.flags.writeable = False
+    results = pose.process(frame)
+    frame.flags.writeable = True
+
+    successMatch = []
+    if results.pose_landmarks:
+        user = Pose(results.pose_landmarks.landmark, 0)
+        for i in range(len(targets)):
+            if user.isMatch(targets[i]):
+                successMatch.append([i, user.getPoseDiff(targets[i])])
+
+    if successMatch:
+        best = min(successMatch, key=lambda x: x[1])
+        return best[0]
+    
+    return None  
+        
+        

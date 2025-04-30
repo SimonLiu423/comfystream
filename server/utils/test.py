@@ -5,10 +5,9 @@ import mediapipe as mp
 import time
 import pickle
 
-from pose import Pose, isMatchPose
+from pose import Pose, isMatchPose, matchPoseId
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
-
 
 
 start_time = time.time()
@@ -62,11 +61,16 @@ with mp_pose.Pose(
                     target = Pose(results.pose_landmarks.landmark, 1000)
         else:
             if results.pose_landmarks:
-                result = isMatchPose(image)
-                if result == True:
-                    print("Success")
+                # result = isMatchPose(image)
+                # if result == True:
+                #     print("Success")
+                # else:
+                #     print("Failed")
+                result = matchPoseId(image)
+                if result != None:
+                    print("Match " + result)
                 else:
-                    print("Failed")
+                    print("Match Failed")
                     
         cv2.imshow('MediaPipe Pose', image)
         
