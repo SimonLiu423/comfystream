@@ -106,14 +106,15 @@ class VideoStreamTrack(MediaStreamTrack):
                 try:
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
-                    isMatchPose(frame)
+                    pose_match = isMatchPose(frame)
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
                             "frame_number": frame_count,
                             "timestamp": time.time(),
                             "width": frame.width,
-                            "height": frame.height
+                            "height": frame.height,
+                            "pose_match": pose_match
                         }
                         self.data_channel.send(json.dumps(metadata))
                     elif frame_count % 100 == 0 and self.data_channel:
