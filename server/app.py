@@ -107,6 +107,7 @@ class VideoStreamTrack(MediaStreamTrack):
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
                     pose_match = isMatchPose(frame)
+                    logger.info(f"Pose match: {pose_match}")
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
@@ -117,7 +118,7 @@ class VideoStreamTrack(MediaStreamTrack):
                             "pose_match": pose_match
                         }
                         self.data_channel.send(json.dumps(metadata))
-                    elif frame_count % 100 == 0 and self.data_channel:
+                    elif frame_count % 100 == 0:
                         # Log data channel state periodically for debugging
                         logger.info(
                             f"Data channel state: {self.data_channel.readyState} (frame {frame_count})")
