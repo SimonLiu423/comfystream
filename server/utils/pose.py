@@ -131,7 +131,7 @@ class Pose():
         return False
 
 
-target_landmarks = getTargetLandmarks('./server/tsuyu.jpg')
+target_landmarks = getTargetLandmarks('./test.png')
 if target_landmarks:
     default_target = Pose(target_landmarks, 1000)
 
