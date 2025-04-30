@@ -338,7 +338,7 @@ async def offer(request):
                         response = {"type": "prompts_updated", "success": True}
                         channel.send(json.dumps(response))
                     elif params.get("type") == "set_pose_targets":
-                        pose_targets[id(pc)] = json.loads(params["pose_targets"])
+                        pose_targets[id(pc)] = params["pose_targets"]
                         response = {"type": "pose_targets_set", "success": True}
                         channel.send(json.dumps(response))
                     else:
