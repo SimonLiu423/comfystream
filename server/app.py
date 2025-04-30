@@ -52,7 +52,7 @@ class VideoStreamTrack(MediaStreamTrack):
 
     def __init__(
             self, track: MediaStreamTrack, pipeline: Pipeline, pc: RTCPeerConnection,
-            pose_targets: list):
+            pose_targets: dict):
         """Initialize the VideoStreamTrack.
 
         Args:
@@ -97,7 +97,7 @@ class VideoStreamTrack(MediaStreamTrack):
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
                     pose_match = isMatchPose(frame)
-                    logger.info(f"Pose targets: {self.pose_targets}")
+                    logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
