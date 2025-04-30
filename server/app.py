@@ -69,10 +69,10 @@ class VideoStreamTrack(MediaStreamTrack):
         # Create a data channel for sending frame metadata
         try:
             self.data_channel = pc.createDataChannel("frame_metadata")
-            self.data_channel.on("open", self.on_data_channel_open)
-            self.data_channel.on("close", self.on_data_channel_close)
-            self.data_channel.on("error", self.on_data_channel_error)
-            self.data_channel.on("message", self.on_data_channel_message)
+            # self.data_channel.on("open", self.on_data_channel_open)
+            # self.data_channel.on("close", self.on_data_channel_close)
+            # self.data_channel.on("error", self.on_data_channel_error)
+            # self.data_channel.on("message", self.on_data_channel_message)
             logger.info(
                 f"Created data channel for frame metadata, initial state: {self.data_channel.readyState}")
         except Exception as e:
@@ -300,6 +300,25 @@ async def offer(request):
     @pc.on("datachannel")
     def on_datachannel(channel):
         logger.info(f"Data channel received from client: {channel.label}")
+        if channel.label == "frame_metadata":
+            logger.info("Frame metadata channel established")
+
+            @channel.on("open")
+            def on_open():
+                logger.info("Frame metadata channel opened")
+
+            @channel.on("close")
+            def on_close():
+                logger.info("Frame metadata channel closed")
+
+            @channel.on("error")
+            def on_error(error):
+                logger.error(f"Frame metadata channel error: {error}")
+
+            @channel.on("message")
+            def on_message(message):
+                logger.info(f"Frame metadata channel received message: {message}")
+
         if channel.label == "control":
             logger.info("Control channel established")
 
