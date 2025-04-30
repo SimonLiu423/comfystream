@@ -72,6 +72,7 @@ class VideoStreamTrack(MediaStreamTrack):
             self.data_channel.on("open", self.on_data_channel_open)
             self.data_channel.on("close", self.on_data_channel_close)
             self.data_channel.on("error", self.on_data_channel_error)
+            self.data_channel.on("message", self.on_data_channel_message)
             logger.info(
                 f"Created data channel for frame metadata, initial state: {self.data_channel.readyState}")
         except Exception as e:
@@ -96,6 +97,9 @@ class VideoStreamTrack(MediaStreamTrack):
     def on_data_channel_error(self, error):
         logger.error(f"Frame metadata data channel error: {error}")
 
+    def on_data_channel_message(self, message):
+        logger.info(f"Received message: {message}")
+
     async def collect_frames(self):
         """Collect video frames from the underlying track and pass them to
         the processing pipeline. Stops when track ends or connection closes.
@@ -107,7 +111,6 @@ class VideoStreamTrack(MediaStreamTrack):
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
                     pose_match = isMatchPose(frame)
-                    logger.info(f"Pose match: {pose_match}")
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
@@ -118,10 +121,6 @@ class VideoStreamTrack(MediaStreamTrack):
                             "pose_match": pose_match
                         }
                         self.data_channel.send(json.dumps(metadata))
-                    if frame_count % 100 == 0:
-                        # Log data channel state periodically for debugging
-                        logger.info(
-                            f"Data channel state: {self.data_channel.readyState} (frame {frame_count})")
 
                     frame_count += 1
                 except asyncio.CancelledError:
