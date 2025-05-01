@@ -68,6 +68,7 @@ class VideoStreamTrack(MediaStreamTrack):
             metrics_manager=app["metrics_manager"], track_id=track.id
         )
         self.running = True
+        self.pc = pc
         self.pose_targets = pose_targets
         # Create a data channel for sending frame metadata
         try:
@@ -98,7 +99,7 @@ class VideoStreamTrack(MediaStreamTrack):
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
                     opencv_frame = frame.to_ndarray(format="bgr24")
-                    pose_match = matchPoseId(opencv_frame, self.pose_targets)
+                    pose_match = matchPoseId(opencv_frame, self.pose_targets[id(self.pc)])
                     # logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
