@@ -7,7 +7,7 @@ import sys
 
 import torch
 
-from utils.pose import matchPoseId, decode_image
+from utils.pose import matchPoseId, decode_image, Pose
 from utils.pose_detect_by_image import getTargetLandmarkList
 
 # Initialize CUDA before any other imports to prevent core dump.
@@ -342,7 +342,8 @@ async def offer(request):
                         channel.send(json.dumps(response))
                     elif params.get("type") == "set_pose_targets":
                         image_list = [decode_image(image) for image in params["pose_targets"]]
-                        pose_targets[id(pc)] = getTargetLandmarkList(image_list)
+                        pose_targets[id(pc)] = [Pose(landmarks, 1000)
+                                                for landmarks in getTargetLandmarkList(image_list)]
                         # logger.info(f"Pose targets set: {pose_targets[id(pc)]}")
                         response = {"type": "pose_targets_set", "success": True}
                         channel.send(json.dumps(response))
