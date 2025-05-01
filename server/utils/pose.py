@@ -132,14 +132,14 @@ class Pose():
         return False
 
 
-target_landmarks = getTargetLandmarks('./server/tsuyu.jpg')
+target_landmarks = getTargetLandmarks(image_path='./server/tsuyu.jpg')
 if target_landmarks:
     default_target = Pose(target_landmarks, 1000)
 
 target_paths = ['./server/tsuyu.jpg', './server/littleLeaf.jpg', './server/bigLeaf.jpg']
 default_targets = []
 for target_path in target_paths:
-    target_landmarks = getTargetLandmarks(target_path)
+    target_landmarks = getTargetLandmarks(image_path=target_path)
     if target_landmarks:
         target = Pose(target_landmarks, 1000)
         default_targets.append(target)
