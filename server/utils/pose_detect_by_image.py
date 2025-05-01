@@ -5,8 +5,10 @@ import mediapipe as mp
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
-def getTargetLandmarks(image_path):
-    image = cv2.imread(image_path)
+
+def getTargetLandmarks(image=None, image_path=None):
+    if not image:
+        image = cv2.imread(image_path)
     if image is None:
         print("image load failed")
         return None
@@ -14,8 +16,13 @@ def getTargetLandmarks(image_path):
 
     results = pose.process(image_rgb)
     if results.pose_landmarks:
-        #print(results.pose_landmarks.landmark)
+        # print(results.pose_landmarks.landmark)
         return results.pose_landmarks.landmark
     return None
 
 
+def getTargetLandmarkList(image_list):
+    landmark_list = []
+    for image in image_list:
+        landmark_list.append(getTargetLandmarks(image, None))
+    return landmark_list

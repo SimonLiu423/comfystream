@@ -7,7 +7,8 @@ import sys
 
 import torch
 
-from utils.pose import isMatchPose
+from utils.pose import isMatchPose, decode_image
+from utils.pose_detect_by_image import getTargetLandmarkList
 
 # Initialize CUDA before any other imports to prevent core dump.
 if torch.cuda.is_available():
@@ -339,7 +340,8 @@ async def offer(request):
                         response = {"type": "prompts_updated", "success": True}
                         channel.send(json.dumps(response))
                     elif params.get("type") == "set_pose_targets":
-                        pose_targets[id(pc)] = params["pose_targets"]
+                        image_list = [decode_image(image) for image in params["pose_targets"]]
+                        pose_targets[id(pc)] = getTargetLandmarkList(image_list)
                         logger.info(f"Pose targets set: {pose_targets[id(pc)]}")
                         response = {"type": "pose_targets_set", "success": True}
                         channel.send(json.dumps(response))
