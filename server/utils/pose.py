@@ -152,11 +152,11 @@ def isMatchPose(frame, target=default_target):
     # To improve performance, optionally mark the image as not writeable
     # to pass by reference.
     # frame.flags.writeable = False
-    frame.flags.writeable = False
+    # frame.flags.writeable = False
     results = pose.process(frame)
 
     # Draw the pose annotations on the frame.
-    frame.flags.writeable = True
+    # frame.flags.writeable = True
 
     if results.pose_landmarks:
         user = Pose(results.pose_landmarks.landmark, 0)
@@ -166,9 +166,9 @@ def isMatchPose(frame, target=default_target):
 
 
 def matchPoseId(frame, targets=default_targets):
-    frame.flags.writeable = False
+    # frame.flags.writeable = False
     results = pose.process(frame)
-    frame.flags.writeable = True
+    # frame.flags.writeable = True
 
     successMatch = []
     if results.pose_landmarks:

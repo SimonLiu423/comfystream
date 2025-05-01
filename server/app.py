@@ -97,7 +97,8 @@ class VideoStreamTrack(MediaStreamTrack):
                 try:
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
-                    pose_match = matchPoseId(frame, self.pose_targets)
+                    opencv_frame = frame.to_ndarray(format="bgr24")
+                    pose_match = matchPoseId(opencv_frame, self.pose_targets)
                     # logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
@@ -341,7 +342,7 @@ async def offer(request):
                     elif params.get("type") == "set_pose_targets":
                         image_list = [decode_image(image) for image in params["pose_targets"]]
                         pose_targets[id(pc)] = getTargetLandmarkList(image_list)
-                        logger.info(f"Pose targets set: {pose_targets[id(pc)]}")
+                        # logger.info(f"Pose targets set: {pose_targets[id(pc)]}")
                         response = {"type": "pose_targets_set", "success": True}
                         channel.send(json.dumps(response))
                     else:
