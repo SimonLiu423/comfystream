@@ -7,7 +7,7 @@ import sys
 
 import torch
 
-from utils.pose import isMatchPose, decode_image
+from utils.pose import matchPoseId, decode_image
 from utils.pose_detect_by_image import getTargetLandmarkList
 
 # Initialize CUDA before any other imports to prevent core dump.
@@ -97,7 +97,7 @@ class VideoStreamTrack(MediaStreamTrack):
                 try:
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
-                    pose_match = isMatchPose(frame)
+                    pose_match = matchPoseId(frame, self.pose_targets)
                     # logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":

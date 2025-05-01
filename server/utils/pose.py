@@ -181,7 +181,7 @@ def matchPoseId(frame, targets=default_targets):
         best = min(successMatch, key=lambda x: x[1])
         return best[0]
 
-    return None
+    return -1
 
 
 def decode_image(image_data):
