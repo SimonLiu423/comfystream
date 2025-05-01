@@ -7,7 +7,7 @@ pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
 
 def getTargetLandmarks(image=None, image_path=None):
-    if not image:
+    if image is None:
         image = cv2.imread(image_path)
     if image is None:
         print("image load failed")
