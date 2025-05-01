@@ -359,7 +359,7 @@ async def offer(request):
     def on_track(track):
         logger.info(f"Track received: {track.kind}")
         if track.kind == "video":
-            videoTrack = VideoStreamTrack(track, pipeline, pc, pose_targets[id(pc)])
+            videoTrack = VideoStreamTrack(track, pipeline, pc, pose_targets)
             tracks["video"] = videoTrack
             sender = pc.addTrack(videoTrack)
 
