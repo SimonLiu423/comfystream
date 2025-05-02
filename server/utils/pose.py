@@ -3,13 +3,15 @@ import math
 import cv2
 import numpy as np
 import mediapipe as mp
-
+import logging
 from .pose_detect_by_image import getTargetLandmarks
 
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 default_target = None
+
+logger = logging.getLogger(__name__)
 
 
 class Pose():
@@ -127,6 +129,7 @@ class Pose():
     # compare whether the pose difference is less than given threshold of the target
     def isMatch(self, target):
         sumOfDiff = self.getPoseDiff(target)
+        logger.info(f"sumOfDiff: {sumOfDiff}, threshold: {target.threshold}")
         if sumOfDiff < target.threshold:
             return True
         return False
