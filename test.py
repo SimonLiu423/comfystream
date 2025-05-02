@@ -9,6 +9,7 @@ from aiohttp import ClientSession
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack, RTCConfiguration, RTCIceServer
 from aiortc.contrib.media import MediaPlayer
 import av
+import sys
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -176,10 +177,17 @@ async def main():
         )
     # Set up media stream (e.g., from a webcam)
     logger.info("Setting up media player")
-    player = MediaPlayer("0", format="avfoundation", options={
-        "video_size": "640x480",
-        "framerate": "30",
-    })
+    if sys.platform == 'darwin':  # macOS
+        player = MediaPlayer("0", format="avfoundation", options={
+            "video_size": "640x480",
+            "framerate": "30",
+        })
+    else:  # Windows
+        player = MediaPlayer("video=0", format="dshow", options={
+            "video_size": "640x480",
+            "framerate": "30",
+            "rtbufsize": "702000k",  # Increased buffer size for stability
+        })
 
     # Add local video track
     if player.video:
