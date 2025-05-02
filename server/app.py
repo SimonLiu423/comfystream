@@ -235,12 +235,15 @@ def get_ice_servers():
 
 
 async def offer(request):
-    pipeline = request.app["pipeline"]
+    pipelines = request.app["pipeline"]
     pcs = request.app["pcs"]
     pose_targets = request.app["pose_targets"]
 
     params = await request.json()
 
+    pipeline = Pipeline(
+        cwd=request.app["workspace"], disable_cuda_malloc=True, gpu_only=True, preview_method='none'
+    )
     await pipeline.set_prompts(params["prompts"])
 
     offer_params = params["offer"]
@@ -272,6 +275,7 @@ async def offer(request):
         logger.info(f"Signaling state is: {pc.signalingState}")
 
     pcs.add(pc)
+    pipelines[id(pc)] = pipeline
     pose_targets[id(pc)] = []
 
     tracks = {"video": None, "audio": None}
@@ -436,9 +440,7 @@ async def on_startup(app: web.Application):
         patch_loop_datagram(app["media_ports"])
 
     app["pose_targets"] = dict()
-    app["pipeline"] = Pipeline(
-        cwd=app["workspace"], disable_cuda_malloc=True, gpu_only=True, preview_method='none'
-    )
+    app["pipeline"] = dict()
     app["pcs"] = set()
     app["video_tracks"] = {}
 
