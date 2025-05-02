@@ -1,0 +1,23 @@
+{
+  "1": {
+    "inputs": {
+      "image": "ControlNet_00260_.png"
+    },
+    "class_type": "PrimaryInputLoadImage",
+    "_meta": {
+      "title": "PrimaryInputLoadImage"
+    }
+  },
+  "2": {
+    "inputs": {
+      "images": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  }
+}
