@@ -276,6 +276,8 @@ async def offer(request):
 
     pcs.add(pc)
     pipelines[id(pc)] = pipeline
+    logger.info(f"Pipelines: {[id(p) for p in pipelines]}")
+    logger.info(f"current pipeline: {id(pipeline)}")
     pose_targets[id(pc)] = []
 
     tracks = {"video": None, "audio": None}
