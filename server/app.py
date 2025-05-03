@@ -100,7 +100,7 @@ class VideoStreamTrack(MediaStreamTrack):
                     await self.pipeline.put_video_frame(frame)
                     opencv_frame = frame.to_ndarray(format="bgr24")
                     pose_match = matchPoseId(opencv_frame, self.pose_targets[id(self.pc)])
-                    # logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
+                    logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
