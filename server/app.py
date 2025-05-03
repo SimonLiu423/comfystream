@@ -259,27 +259,26 @@ async def offer(request):
         logger.info("No ICE servers found, using default configuration")
         pc = RTCPeerConnection()
 
-    pc_id = id(pc)
-    logger.info(f"Creating new peer connection {pc_id}")
+    logger.info(f"Creating new peer connection {id(pc)}")
 
     # Add event handlers to track connection state
     @pc.on("icegatheringstatechange")
     def on_icegatheringstatechange():
-        logger.info(f"ICE gathering state for peer {pc_id}: {pc.iceGatheringState}")
+        logger.info(f"ICE gathering state is: {pc.iceGatheringState}")
 
     @pc.on("iceconnectionstatechange")
     def on_iceconnectionstatechange():
-        logger.info(f"ICE connection state for peer {pc_id}: {pc.iceConnectionState}")
+        logger.info(f"ICE connection state is: {pc.iceConnectionState}")
 
     @pc.on("signalingstatechange")
     def on_signalingstatechange():
-        logger.info(f"Signaling state for peer {pc_id}: {pc.signalingState}")
+        logger.info(f"Signaling state is: {pc.signalingState}")
 
     pcs.add(pc)
-    pipelines[pc_id] = pipeline
-    logger.info(f"Active peer connections: {len(pcs)}")
-    logger.info(f"Active pipelines: {len(pipelines)}")
-    pose_targets[pc_id] = []
+    pipelines[id(pc)] = pipeline
+    logger.info(f"Pipelines: {[id(p) for p in pipelines]}")
+    logger.info(f"current pipeline: {id(pipeline)}")
+    pose_targets[id(pc)] = []
 
     tracks = {"video": None, "audio": None}
 
@@ -349,8 +348,8 @@ async def offer(request):
                         channel.send(json.dumps(response))
                     elif params.get("type") == "set_pose_targets":
                         image_list = [decode_image(image) for image in params["pose_targets"]]
-                        pose_targets[pc_id] = [Pose(landmarks, 1000)
-                                               for landmarks in getTargetLandmarkList(image_list)]
+                        pose_targets[id(pc)] = [Pose(landmarks, 1000)
+                                                for landmarks in getTargetLandmarkList(image_list)]
                         # logger.info(f"Pose targets set: {pose_targets[id(pc)]}")
                         response = {"type": "pose_targets_set", "success": True}
                         channel.send(json.dumps(response))
@@ -389,19 +388,13 @@ async def offer(request):
 
     @pc.on("connectionstatechange")
     async def on_connectionstatechange():
-        logger.info(f"Connection state for peer {pc_id}: {pc.connectionState}")
-        if pc.connectionState == "failed" or pc.connectionState == "closed":
-            # Clean up resources for this client
-            if pc_id in pipelines:
-                logger.info(f"Cleaning up pipeline for peer {pc_id}")
-                await pipelines[pc_id].cleanup()
-                del pipelines[pc_id]
-            if pc_id in pose_targets:
-                del pose_targets[pc_id]
+        logger.info(f"Connection state is: {pc.connectionState}")
+        if pc.connectionState == "failed":
             await pc.close()
             pcs.discard(pc)
-            logger.info(
-                f"Peer {pc_id} disconnected. Active peers: {len(pcs)}, Active pipelines: {len(pipelines)}")
+        elif pc.connectionState == "closed":
+            await pc.close()
+            pcs.discard(pc)
 
     await pc.setRemoteDescription(offer)
 
