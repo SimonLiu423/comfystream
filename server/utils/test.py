@@ -44,33 +44,33 @@ with mp_pose.Pose(
         # results.pose_landmarks,
         # mp_pose.POSE_CONNECTIONS)
         
-        if not countdown_done:
+        # if not countdown_done:
 
-            elapsed = time.time() - start_time
-            countdown = countdown_seconds - int(elapsed)
+        #     elapsed = time.time() - start_time
+        #     countdown = countdown_seconds - int(elapsed)
 
-            if countdown > 0:
-                cv2.putText(image, str(countdown), (50, 100),
-                            cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 5, cv2.LINE_AA)
-            elif countdown <= 0 and elapsed < countdown_seconds + 1:
-                cv2.putText(image, "GO!", (50, 100),
-                            cv2.FONT_HERSHEY_SIMPLEX, 2.5, (0, 0, 255), 5, cv2.LINE_AA)
-            else:
-                countdown_done = True
-                if results.pose_landmarks:
-                    target = Pose(results.pose_landmarks.landmark, 1000)
-        else:
-            if results.pose_landmarks:
-                # result = isMatchPose(image)
-                # if result == True:
-                #     print("Success")
-                # else:
-                #     print("Failed")
-                result = matchPoseId(image)
-                if result != None:
-                    print("Match " + result)
-                else:
-                    print("Match Failed")
+        #     if countdown > 0:
+        #         cv2.putText(image, str(countdown), (50, 100),
+        #                     cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 5, cv2.LINE_AA)
+        #     elif countdown <= 0 and elapsed < countdown_seconds + 1:
+        #         cv2.putText(image, "GO!", (50, 100),
+        #                     cv2.FONT_HERSHEY_SIMPLEX, 2.5, (0, 0, 255), 5, cv2.LINE_AA)
+        #     else:
+        #         countdown_done = True
+        #         if results.pose_landmarks:
+        #             target = Pose(results.pose_landmarks.landmark, 1000)
+        # else:
+        if results.pose_landmarks:
+            # result = isMatchPose(image)
+            # if result == True:
+            #     print("Success")
+            # else:
+            #     print("Failed")
+            result = matchPoseId(image)
+            if result != -1:
+                print("Match " + str(result))
+            # else:
+            #     print("Match Failed")
                     
         cv2.imshow('MediaPipe Pose', image)
         

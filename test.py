@@ -32,9 +32,9 @@ remote_frame = None
 data_channel = None
 control_channel = None
 pose_targets = [
-    encode_image(cv2.imread("a.jpg")),
-    encode_image(cv2.imread("b.jpg")),
-    encode_image(cv2.imread("c.jpg")),
+    # encode_image(cv2.imread("a.jpg")),
+    # encode_image(cv2.imread("b.jpg")),
+    # encode_image(cv2.imread("c.jpg")),
 ]
 
 
@@ -183,7 +183,7 @@ async def main():
             "framerate": "30",
         })
     else:  # Windows
-        player = MediaPlayer("video=0", format="dshow", options={
+        player = MediaPlayer("video=ACER HD User Facing", format="dshow", options={
             "video_size": "640x480",
             "framerate": "30",
             "rtbufsize": "702000k",  # Increased buffer size for stability

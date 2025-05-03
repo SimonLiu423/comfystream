@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import mediapipe as mp
 import logging
-from .pose_detect_by_image import getTargetLandmarks
+from pose_detect_by_image import getTargetLandmarks
 
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
@@ -13,6 +13,8 @@ default_target = None
 
 logger = logging.getLogger(__name__)
 
+class PoseDetectError(Exception):
+    pass
 
 class Pose():
     def __init__(self, landmarks, threshold):
@@ -107,7 +109,7 @@ class Pose():
     def getPoseDiff(self, target):
         diffSum = 0
         cnt = 0
-
+        
         for i in range(int(len(self.angles))):
             if self.angles[i] == -1 or target.angles[i] == -1:
                 continue
@@ -122,6 +124,7 @@ class Pose():
         # print(target.valid_angles)
         if cnt == 0 or self.valid_angles < target.valid_angles:
             return 50000
+            #raise PoseDetectError('Invalid pose compare: In each angle, at least one pose is not detected correctly. Or the correctly detected angles of user is less than the target.')
         avgDiff = diffSum / cnt
         # print(str(avgDiff))
         return avgDiff
@@ -137,14 +140,15 @@ class Pose():
 
 target_landmarks = getTargetLandmarks(image_path='./server/tsuyu.jpg')
 if target_landmarks:
-    default_target = Pose(target_landmarks, 1000)
+    default_target = Pose(target_landmarks, 5000)
 
-target_paths = ['./server/tsuyu.jpg', './server/littleLeaf.jpg', './server/bigLeaf.jpg']
+# target_paths = ['./server/tsuyu.jpg', './server/littleLeaf.jpg', './server/bigLeaf.jpg', './server/bigpose.png']
+target_paths = ['./server/bigpose.png', './server/raisehand.png']
 default_targets = []
 for target_path in target_paths:
     target_landmarks = getTargetLandmarks(image_path=target_path)
     if target_landmarks:
-        target = Pose(target_landmarks, 1000)
+        target = Pose(target_landmarks, 5000)
         default_targets.append(target)
 
 
