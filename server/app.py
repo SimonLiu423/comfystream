@@ -7,7 +7,7 @@ import sys
 
 import torch
 
-from utils.pose import matchPoseId, decode_image, Pose
+from utils.pose import PoseDetectError, matchPoseId, decode_image, Pose
 from utils.pose_detect_by_image import getTargetLandmarkList
 
 # Initialize CUDA before any other imports to prevent core dump.
@@ -99,8 +99,12 @@ class VideoStreamTrack(MediaStreamTrack):
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
                     opencv_frame = frame.to_ndarray(format="bgr24")
-                    pose_match = matchPoseId(opencv_frame, self.pose_targets[id(self.pc)])
                     logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
+                    try:
+                        pose_match = matchPoseId(opencv_frame, self.pose_targets[id(self.pc)])
+                    except PoseDetectError as e:
+                        logger.error(f"Error matching pose: {e}")
+                        pose_match = e.message
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
@@ -343,7 +347,7 @@ async def offer(request):
                         channel.send(json.dumps(response))
                     elif params.get("type") == "set_pose_targets":
                         image_list = [decode_image(image) for image in params["pose_targets"]]
-                        pose_targets[id(pc)] = [Pose(landmarks, 1000)
+                        pose_targets[id(pc)] = [Pose(landmarks, 5000)
                                                 for landmarks in getTargetLandmarkList(image_list)]
                         # logger.info(f"Pose targets set: {pose_targets[id(pc)]}")
                         response = {"type": "pose_targets_set", "success": True}
