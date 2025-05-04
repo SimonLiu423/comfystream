@@ -104,7 +104,7 @@ class VideoStreamTrack(MediaStreamTrack):
                         pose_match = matchPoseId(opencv_frame, self.pose_targets[id(self.pc)])
                     except PoseDetectError as e:
                         logger.error(f"Error matching pose: {e}")
-                        pose_match = e
+                        pose_match = repr(e)
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
