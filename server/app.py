@@ -24,7 +24,7 @@ from comfystream.pipeline import Pipeline
 from twilio.rest import Client
 from comfystream.server.utils import patch_loop_datagram, add_prefix_to_app_routes, FPSMeter
 from comfystream.server.metrics import MetricsManager, StreamStatsManager
-from utils import PoseDetectError, matchPoseId, decode_image, Pose, getTargetLandmarks, ImageChunkBuffer
+from utils import PoseDetectError, matchPoseId, decode_image, Pose, getTargetLandmarks, ImageChunkBuffer, default_targets
 import time
 logger = logging.getLogger(__name__)
 logging.getLogger("aiortc.rtcrtpsender").setLevel(logging.WARNING)
@@ -272,7 +272,7 @@ async def offer(request):
         logger.info(f"Signaling state is: {pc.signalingState}")
 
     pcs.add(pc)
-    pose_targets[id(pc)] = []
+    pose_targets[id(pc)] = default_targets
     image_buffer = ImageChunkBuffer()
     image_buffers[id(pc)] = image_buffer
 
