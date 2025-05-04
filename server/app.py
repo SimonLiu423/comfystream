@@ -6,9 +6,6 @@ import os
 import sys
 import torch
 
-from utils.pose import PoseDetectError, matchPoseId, decode_image, Pose
-from utils.pose_detect_by_image import getTargetLandmarkList
-
 # Initialize CUDA before any other imports to prevent core dump.
 if torch.cuda.is_available():
     torch.cuda.init()
@@ -27,7 +24,7 @@ from comfystream.pipeline import Pipeline
 from twilio.rest import Client
 from comfystream.server.utils import patch_loop_datagram, add_prefix_to_app_routes, FPSMeter
 from comfystream.server.metrics import MetricsManager, StreamStatsManager
-from .utils import PoseDetectError, matchPoseId, decode_image, Pose, getTargetLandmarkList
+from utils import PoseDetectError, matchPoseId, decode_image, Pose, getTargetLandmarkList
 import time
 
 logger = logging.getLogger(__name__)
