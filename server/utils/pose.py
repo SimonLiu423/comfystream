@@ -13,8 +13,10 @@ default_target = None
 
 logger = logging.getLogger(__name__)
 
+
 class PoseDetectError(Exception):
     pass
+
 
 class Pose():
     def __init__(self, landmarks, threshold):
@@ -109,7 +111,7 @@ class Pose():
     def getPoseDiff(self, target):
         diffSum = 0
         cnt = 0
-        
+
         for i in range(int(len(self.angles))):
             if self.angles[i] == -1 or target.angles[i] == -1:
                 continue
@@ -123,8 +125,8 @@ class Pose():
         # print(self.valid_angles)
         # print(target.valid_angles)
         if cnt == 0 or self.valid_angles < target.valid_angles:
-            return 50000
-            #raise PoseDetectError('Invalid pose compare: In each angle, at least one pose is not detected correctly. Or the correctly detected angles of user is less than the target.')
+            raise PoseDetectError(
+                'Invalid pose compare: In each angle, at least one pose is not detected correctly. Or the correctly detected angles of user is less than the target.')
         avgDiff = diffSum / cnt
         # print(str(avgDiff))
         return avgDiff
