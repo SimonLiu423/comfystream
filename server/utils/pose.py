@@ -145,7 +145,12 @@ if target_landmarks:
     default_target = Pose(target_landmarks, 5000)
 
 # target_paths = ['./server/tsuyu.jpg', './server/littleLeaf.jpg', './server/bigLeaf.jpg', './server/bigpose.png']
-target_paths = ['./server/bigpose.png', './server/raisehand.png']
+target_paths = ['/workspace/comfystream/server/bigpose.png',
+                '/workspace/comfystream/server/raisehand.png',
+                '/workspace/comfystream/server/tsuyu.jpg',
+                '/workspace/comfystream/server/littleLeaf.jpg',
+                '/workspace/comfystream/server/bigLeaf.jpg',
+                ]
 default_targets = []
 for target_path in target_paths:
     target_landmarks = getTargetLandmarks(image_path=target_path)

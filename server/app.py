@@ -24,9 +24,8 @@ from comfystream.pipeline import Pipeline
 from twilio.rest import Client
 from comfystream.server.utils import patch_loop_datagram, add_prefix_to_app_routes, FPSMeter
 from comfystream.server.metrics import MetricsManager, StreamStatsManager
-from utils import PoseDetectError, matchPoseId, decode_image, Pose, getTargetLandmarkList
+from utils import PoseDetectError, matchPoseId, decode_image, Pose, getTargetLandmarks, ImageChunkBuffer
 import time
-
 logger = logging.getLogger(__name__)
 logging.getLogger("aiortc.rtcrtpsender").setLevel(logging.WARNING)
 logging.getLogger("aiortc.rtcrtpreceiver").setLevel(logging.WARNING)
@@ -238,6 +237,7 @@ async def offer(request):
     pipeline = request.app["pipeline"]
     pcs = request.app["pcs"]
     pose_targets = request.app["pose_targets"]
+    image_buffers = request.app["image_buffers"]
 
     params = await request.json()
 
@@ -273,10 +273,12 @@ async def offer(request):
 
     pcs.add(pc)
     pose_targets[id(pc)] = []
+    image_buffer = ImageChunkBuffer()
+    image_buffers[id(pc)] = image_buffer
 
     tracks = {"video": None, "audio": None}
 
-    # Only add video transceiver if video is present in the offer
+    # Only add video transcever if video is present in the offer
     if "m=video" in offer.sdp:
         # Prefer h264
         transceiver = pc.addTransceiver("video")
@@ -342,11 +344,18 @@ async def offer(request):
                         response = {"type": "prompts_updated", "success": True}
                         channel.send(json.dumps(response))
                     elif params.get("type") == "set_pose_targets":
-                        image_list = [decode_image(image) for image in params["pose_targets"]]
-                        pose_targets[id(pc)] = [Pose(landmarks, 5000)
-                                                for landmarks in getTargetLandmarkList(image_list)]
-                        # logger.info(f"Pose targets set: {pose_targets[id(pc)]}")
-                        response = {"type": "pose_targets_set", "success": True}
+                        is_complete = image_buffer.add_chunk(params["pose_target_chunk"])
+                        if is_complete:
+                            pose_id = params.get("pose_id")
+                            image = image_buffer.get_complete_image()
+                            decoded_image = decode_image(image)
+                            pose_targets[id(pc)][pose_id] = Pose(
+                                getTargetLandmarks(decoded_image), 5000)
+
+                            image_buffer.clear()
+                            response = {"type": "pose_targets_set", "status": "target_added"}
+                        else:
+                            response = {"type": "pose_targets_set", "status": "chunk_added"}
                         channel.send(json.dumps(response))
                     else:
                         logger.warning(
@@ -436,6 +445,7 @@ async def on_startup(app: web.Application):
     if app["media_ports"]:
         patch_loop_datagram(app["media_ports"])
 
+    app["image_buffers"] = dict()
     app["pose_targets"] = dict()
     app["pipeline"] = Pipeline(
         cwd=app["workspace"], disable_cuda_malloc=True, gpu_only=True, preview_method='none'
