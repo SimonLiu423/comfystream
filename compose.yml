@@ -1,0 +1,25 @@
+x-service-common: &service-common
+  ports:
+    - "8189:8188"
+    - "8889:8889"
+  stdin_open: true
+  tty: true
+  volumes:
+    - /media/tony/Junior/ComfyUI/models:/workspace/ComfyUI/models
+    - /media/tony/Junior/ComfyUI/input:/workspace/ComfyUI/input
+    - /media/tony/Junior/ComfyUI/output:/workspace/ComfyUI/output
+    - /media/tony/Junior/ComfyUI/user/default/workflows:/workspace/ComfyUI/user/default/workflows
+services:
+  main:
+    <<: *service-common
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: comfystream-unity:latest
+
+  dev:
+    <<: *service-common
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: comfystream-unity:dev
