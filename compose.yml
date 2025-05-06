@@ -23,11 +23,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: comfystream-unity:latest
+    image: unity-comfystream:latest
 
   dev:
     <<: *service-common
     build:
       context: .
       dockerfile: Dockerfile.dev
-    image: comfystream-unity:dev
+    image: unity-comfystream:dev
