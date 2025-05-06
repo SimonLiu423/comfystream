@@ -9,6 +9,14 @@ x-service-common: &service-common
     - /media/tony/Junior/ComfyUI/input:/workspace/ComfyUI/input
     - /media/tony/Junior/ComfyUI/output:/workspace/ComfyUI/output
     - /media/tony/Junior/ComfyUI/user/default/workflows:/workspace/ComfyUI/user/default/workflows
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+
 services:
   main:
     <<: *service-common
