@@ -280,14 +280,15 @@ async def offer(request):
 
     # Only add video transcever if video is present in the offer
     if "m=video" in offer.sdp:
-        # Add video transceiver with VP8 preference for outgoing stream only
-        transceiver = pc.addTransceiver("video", direction="sendonly")
+        # Prefer h264
+        transceiver = pc.addTransceiver("video")
         caps = RTCRtpSender.getCapabilities("video")
-        prefs = list(filter(lambda x: x.mimeType == "video/VP8", caps.codecs))
+        prefs = list(filter(lambda x: x.name == "H264", caps.codecs))
         transceiver.setCodecPreferences(prefs)
 
-        # Add another transceiver for receiving with any codec
-        pc.addTransceiver("video", direction="recvonly")
+        # Monkey patch max and min bitrate to ensure constant bitrate
+        h264.MAX_BITRATE = MAX_BITRATE
+        h264.MIN_BITRATE = MIN_BITRATE
 
     # Handle control channel from client
     @pc.on("datachannel")
@@ -377,7 +378,7 @@ async def offer(request):
             stream_id = track.id
             request.app["video_tracks"][stream_id] = videoTrack
 
-            codec = "video/VP8"
+            codec = "video/H264"
             force_codec(pc, sender, codec)
         elif track.kind == "audio":
             audioTrack = AudioStreamTrack(track, pipeline)
