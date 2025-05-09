@@ -280,14 +280,11 @@ async def offer(request):
 
     # Only add video transcever if video is present in the offer
     if "m=video" in offer.sdp:
-        # Add video transceiver with VP8 preference for outgoing stream only
-        transceiver = pc.addTransceiver("video", direction="sendonly")
+        # Add video transceiver with VP8 preference
+        transceiver = pc.addTransceiver("video", direction="sendrecv")
         caps = RTCRtpSender.getCapabilities("video")
         prefs = list(filter(lambda x: x.mimeType == "video/VP8", caps.codecs))
         transceiver.setCodecPreferences(prefs)
-
-        # Add another transceiver for receiving with any codec
-        pc.addTransceiver("video", direction="recvonly")
 
     # Handle control channel from client
     @pc.on("datachannel")
