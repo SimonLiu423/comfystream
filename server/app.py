@@ -18,7 +18,7 @@ from aiortc import (
     RTCPeerConnection,
     RTCSessionDescription,
 )
-from aiortc.codecs import h264
+from aiortc.codecs import vpx
 from aiortc.rtcrtpsender import RTCRtpSender
 from comfystream.pipeline import Pipeline
 from twilio.rest import Client
@@ -286,7 +286,9 @@ async def offer(request):
         prefs = list(filter(lambda x: x.mimeType == "video/VP8", caps.codecs))
         transceiver.setCodecPreferences(prefs)
 
-    # Handle control channel from client
+        vpx.MAX_BITRATE = MAX_BITRATE
+        vpx.MIN_BITRATE = MIN_BITRATE
+
     @pc.on("datachannel")
     def on_datachannel(channel):
         logger.info(f"Data channel received from client: {channel.label}")
