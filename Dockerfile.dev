@@ -7,6 +7,7 @@ COPY entrypoint_wrapper_dev.sh /workspace/entrypoint_wrapper.sh
 RUN chmod +x /workspace/entrypoint_wrapper.sh
 RUN apt-get update && apt-get install -y vim
 RUN git clone https://github.com/SimonLiu423/comfystream.git /workspace/unity-cs
+RUN cd /workspace/ComfyUI/custom_nodes && git clone https://github.com/cubiq/ComfyUI_essentials
 
 ENTRYPOINT ["/workspace/entrypoint_wrapper.sh", "/workspace/comfystream/docker/entrypoint.sh", "--server"]
 
