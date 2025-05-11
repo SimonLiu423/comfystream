@@ -5,7 +5,7 @@ import mediapipe as mp
 import time
 import pickle
 
-from pose import Pose, isMatchPose, matchPoseId
+from pose import SkillMatch
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
@@ -15,6 +15,7 @@ countdown_seconds = 3
 countdown_done = False
 target = None
 user = None
+skillMatch = SkillMatch(5)
 
 # For webcam input:
 cap = cv2.VideoCapture(0)
@@ -61,12 +62,7 @@ with mp_pose.Pose(
         #             target = Pose(results.pose_landmarks.landmark, 1000)
         # else:
         if results.pose_landmarks:
-            # result = isMatchPose(image)
-            # if result == True:
-            #     print("Success")
-            # else:
-            #     print("Failed")
-            result = matchPoseId(image)
+            result = skillMatch.checkMatchId(image)
             if result != -1:
                 print("Match " + str(result))
             # else:
