@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 import torch
+import cv2
 
 # Initialize CUDA before any other imports to prevent core dump.
 if torch.cuda.is_available():
@@ -63,6 +64,7 @@ class VideoStreamTrack(MediaStreamTrack):
         )
         self.running = True
         self.pc = pc
+        self.frame_count = 0  # Add frame counter
         # Create a data channel for sending frame metadata
         try:
             self.data_channel = pc.createDataChannel("frame_metadata")
@@ -86,18 +88,22 @@ class VideoStreamTrack(MediaStreamTrack):
         the processing pipeline. Stops when track ends or connection closes.
         """
         try:
-            frame_count = 0
+            self.frame_count = 0
             while self.running:
                 try:
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
                     opencv_frame = frame.to_ndarray(format="bgr24")
+                    # Save received frame every 100 frames
+                    if self.frame_count % 100 == 0:
+                        filename = f"received_frame_{self.frame_count}.png"
+                        cv2.imwrite(filename, opencv_frame)
                     # logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
                     pose_match = matchPoseId(opencv_frame)
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
-                            "frame_number": frame_count,
+                            "frame_number": self.frame_count,
                             "timestamp": time.time(),
                             "width": frame.width,
                             "height": frame.height,
@@ -105,7 +111,7 @@ class VideoStreamTrack(MediaStreamTrack):
                         }
                         self.data_channel.send(json.dumps(metadata))
 
-                    frame_count += 1
+                    self.frame_count += 1
                 except asyncio.CancelledError:
                     logger.info("Frame collection cancelled")
                     break
@@ -131,6 +137,15 @@ class VideoStreamTrack(MediaStreamTrack):
         count for FPS calculation and return the processed frame to the client.
         """
         processed_frame = await self.pipeline.get_processed_video_frame()
+
+        # Save processed frame every 100 frames
+        if self.frame_count % 100 == 0:
+            try:
+                opencv_frame = processed_frame.to_ndarray(format="bgr24")
+                filename = f"processed_frame_{self.frame_count}.png"
+                cv2.imwrite(filename, opencv_frame)
+            except Exception as e:
+                logger.error(f"Error saving processed frame: {str(e)}")
 
         # Increment the frame count to calculate FPS.
         await self.fps_meter.increment_frame_count()
