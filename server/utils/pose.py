@@ -39,7 +39,7 @@ def matchPoseId(frame):
 
                 # transform into the original label
                 y_pred = mlb.inverse_transform(y_pred_transformed) 
-                if y_pred:
+                if y_pred and y_pred[0]:
                     return y_pred[0][0]
     return -1
     
