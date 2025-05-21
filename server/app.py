@@ -101,7 +101,7 @@ class VideoStreamTrack(MediaStreamTrack):
                             "timestamp": time.time(),
                             "width": frame.width,
                             "height": frame.height,
-                            "pose_match": pose_match
+                            "pose_match": int(pose_match)
                         }
                         self.data_channel.send(json.dumps(metadata))
 
