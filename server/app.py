@@ -24,7 +24,7 @@ from comfystream.pipeline import Pipeline
 from twilio.rest import Client
 from comfystream.server.utils import patch_loop_datagram, add_prefix_to_app_routes, FPSMeter
 from comfystream.server.metrics import MetricsManager, StreamStatsManager
-from utils import PoseDetectError, matchPoseId, decode_image, Pose, getTargetLandmarks, ImageChunkBuffer, default_targets
+from utils import matchPoseId, ImageChunkBuffer
 import time
 logger = logging.getLogger(__name__)
 logging.getLogger("aiortc.rtcrtpsender").setLevel(logging.WARNING)
@@ -47,8 +47,7 @@ class VideoStreamTrack(MediaStreamTrack):
     kind = "video"
 
     def __init__(
-            self, track: MediaStreamTrack, pipeline: Pipeline, pc: RTCPeerConnection,
-            pose_targets: dict):
+            self, track: MediaStreamTrack, pipeline: Pipeline, pc: RTCPeerConnection):
         """Initialize the VideoStreamTrack.
 
         Args:
@@ -64,7 +63,6 @@ class VideoStreamTrack(MediaStreamTrack):
         )
         self.running = True
         self.pc = pc
-        self.pose_targets = pose_targets
         # Create a data channel for sending frame metadata
         try:
             self.data_channel = pc.createDataChannel("frame_metadata")
@@ -94,12 +92,8 @@ class VideoStreamTrack(MediaStreamTrack):
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
                     opencv_frame = frame.to_ndarray(format="bgr24")
-                    logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
-                    try:
-                        pose_match = matchPoseId(opencv_frame, self.pose_targets[id(self.pc)])
-                    except PoseDetectError as e:
-                        logger.error(f"Error matching pose: {e}")
-                        pose_match = repr(e)
+                    # logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
+                    pose_match = matchPoseId(opencv_frame)
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
@@ -107,7 +101,7 @@ class VideoStreamTrack(MediaStreamTrack):
                             "timestamp": time.time(),
                             "width": frame.width,
                             "height": frame.height,
-                            "pose_match": pose_match
+                            "pose_match": int(pose_match)
                         }
                         self.data_channel.send(json.dumps(metadata))
 
@@ -236,7 +230,7 @@ def get_ice_servers():
 async def offer(request):
     pipeline = request.app["pipeline"]
     pcs = request.app["pcs"]
-    pose_targets = request.app["pose_targets"]
+    # pose_targets = request.app["pose_targets"]
     image_buffers = request.app["image_buffers"]
 
     params = await request.json()
@@ -272,7 +266,7 @@ async def offer(request):
         logger.info(f"Signaling state is: {pc.signalingState}")
 
     pcs.add(pc)
-    pose_targets[id(pc)] = default_targets
+    # pose_targets[id(pc)] = default_targets
     image_buffer = ImageChunkBuffer()
     image_buffers[id(pc)] = image_buffer
 
@@ -343,20 +337,20 @@ async def offer(request):
                         await pipeline.update_prompts(params["prompts"])
                         response = {"type": "prompts_updated", "success": True}
                         channel.send(json.dumps(response))
-                    elif params.get("type") == "set_pose_targets":
-                        is_complete = image_buffer.add_chunk(params["pose_target_chunk"])
-                        if is_complete:
-                            pose_id = params.get("pose_id")
-                            image = image_buffer.get_complete_image()
-                            decoded_image = decode_image(image)
-                            pose_targets[id(pc)][pose_id] = Pose(
-                                getTargetLandmarks(decoded_image), 5000)
+                    # elif params.get("type") == "set_pose_targets":
+                    #     is_complete = image_buffer.add_chunk(params["pose_target_chunk"])
+                    #     if is_complete:
+                    #         pose_id = params.get("pose_id")
+                    #         image = image_buffer.get_complete_image()
+                    #         decoded_image = decode_image(image)
+                    #         pose_targets[id(pc)][pose_id] = Pose(
+                    #             getTargetLandmarks(decoded_image), 5000)
 
-                            image_buffer.clear()
-                            response = {"type": "pose_targets_set", "status": "target_added"}
-                        else:
-                            response = {"type": "pose_targets_set", "status": "chunk_added"}
-                        channel.send(json.dumps(response))
+                    #         image_buffer.clear()
+                    #         response = {"type": "pose_targets_set", "status": "target_added"}
+                    #     else:
+                    #         response = {"type": "pose_targets_set", "status": "chunk_added"}
+                    #     channel.send(json.dumps(response))
                     else:
                         logger.warning(
                             "[Server] Invalid message format - missing required fields"
@@ -370,7 +364,7 @@ async def offer(request):
     def on_track(track):
         logger.info(f"Track received: {track.kind}")
         if track.kind == "video":
-            videoTrack = VideoStreamTrack(track, pipeline, pc, pose_targets)
+            videoTrack = VideoStreamTrack(track, pipeline, pc)
             tracks["video"] = videoTrack
             sender = pc.addTrack(videoTrack)
 
@@ -446,7 +440,7 @@ async def on_startup(app: web.Application):
         patch_loop_datagram(app["media_ports"])
 
     app["image_buffers"] = dict()
-    app["pose_targets"] = dict()
+    # app["pose_targets"] = dict()
     app["pipeline"] = Pipeline(
         cwd=app["workspace"], disable_cuda_malloc=True, gpu_only=True, preview_method='none'
     )
