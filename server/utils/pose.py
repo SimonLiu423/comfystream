@@ -68,6 +68,7 @@ class SkillMatch():
         else:
             self.__counts = 1
             self.__curr_id = id
+            return -1
         if self.__counts == self.delay_count:
             self.__counts = 0
             return id
