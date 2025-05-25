@@ -25,7 +25,7 @@ from comfystream.pipeline import Pipeline
 from twilio.rest import Client
 from comfystream.server.utils import patch_loop_datagram, add_prefix_to_app_routes, FPSMeter
 from comfystream.server.metrics import MetricsManager, StreamStatsManager
-from utils import matchPoseId, ImageChunkBuffer
+from utils import SkillMatch, ImageChunkBuffer
 import time
 logger = logging.getLogger(__name__)
 logging.getLogger("aiortc.rtcrtpsender").setLevel(logging.WARNING)
@@ -65,6 +65,7 @@ class VideoStreamTrack(MediaStreamTrack):
         self.running = True
         self.pc = pc
         self.frame_count = 0  # Add frame counter
+        self.skill_match = SkillMatch(5)
         # Create a data channel for sending frame metadata
         try:
             self.data_channel = pc.createDataChannel("frame_metadata")
@@ -99,7 +100,7 @@ class VideoStreamTrack(MediaStreamTrack):
                         filename = f"received_frame_{self.frame_count}.png"
                         cv2.imwrite(filename, opencv_frame)
                     # logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
-                    pose_match = matchPoseId(opencv_frame)
+                    pose_match = self.skill_match.checkMatchId(opencv_frame)
                     # Send frame metadata as JSON if data channel exists and is open
                     if self.data_channel and self.data_channel.readyState == "open":
                         metadata = {
