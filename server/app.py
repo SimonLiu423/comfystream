@@ -137,16 +137,16 @@ class VideoStreamTrack(MediaStreamTrack):
         """Receive a processed video frame from the pipeline, increment the frame
         count for FPS calculation and return the processed frame to the client.
         """
-        processed_frame = await self.pipeline.get_processed_video_frame()
+        processed_frame, original_frame = await self.pipeline.get_processed_video_frame()
 
         if self.data_channel and self.data_channel.readyState == "open":
-            opencv_frame = processed_frame.to_ndarray(format="bgr24")
+            opencv_frame = original_frame.to_ndarray(format="bgr24")
             pose_match = self.skill_match.checkMatchId(opencv_frame)
             metadata = {
                 "frame_number": self.frame_count,
                 "timestamp": time.time(),
-                "width": processed_frame.width,
-                "height": processed_frame.height,
+                "width": original_frame.width,
+                "height": original_frame.height,
                 "pose_match": int(pose_match)
             }
             self.data_channel.send(json.dumps(metadata))
