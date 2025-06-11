@@ -6,6 +6,7 @@ import os
 import sys
 import torch
 import cv2
+import av
 
 # Initialize CUDA before any other imports to prevent core dump.
 if torch.cuda.is_available():
@@ -93,24 +94,14 @@ class VideoStreamTrack(MediaStreamTrack):
             while self.running:
                 try:
                     frame = await self.track.recv()
-                    await self.pipeline.put_video_frame(frame)
-                    # opencv_frame = frame.to_ndarray(format="bgr24")
-                    # # Save received frame every 100 frames
-                    # # if self.frame_count % 100 == 0:
-                    # #     filename = f"received_frame_{self.frame_count}.png"
-                    # #     cv2.imwrite(filename, opencv_frame)
-                    # # logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
-                    # pose_match = self.skill_match.checkMatchId(opencv_frame)
-                    # # Send frame metadata as JSON if data channel exists and is open
-                    # if self.data_channel and self.data_channel.readyState == "open":
-                    #     metadata = {
-                    #         "frame_number": self.frame_count,
-                    #         "timestamp": time.time(),
-                    #         "width": frame.width,
-                    #         "height": frame.height,
-                    #         "pose_match": int(pose_match)
-                    #     }
-                    #     self.data_channel.send(json.dumps(metadata))
+                    # Rotate frame 90 degrees by swapping width/height and transforming pixels
+                    rotated_frame = av.VideoFrame.from_ndarray(
+                        frame.to_ndarray(format="rgb24").transpose(1, 0, 2)[::-1],
+                        format="rgb24"
+                    )
+                    rotated_frame.pts = frame.pts
+                    rotated_frame.time_base = frame.time_base
+                    await self.pipeline.put_video_frame(rotated_frame)
 
                     # self.frame_count += 1
                 except asyncio.CancelledError:
