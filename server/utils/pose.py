@@ -61,12 +61,15 @@ class SkillMatch():
 
     def checkMatchId(self, frame):
         id = matchPoseId(frame)
+        if id == -1:
+            return -1
         if self.__curr_id == id:
             self.__counts += 1
         else:
             self.__counts = 1
             self.__curr_id = id
+            return -1
         if self.__counts == self.delay_count:
             self.__counts = 0
             return id
-        return -1
+        return 100
