@@ -94,25 +94,25 @@ class VideoStreamTrack(MediaStreamTrack):
                 try:
                     frame = await self.track.recv()
                     await self.pipeline.put_video_frame(frame)
-                    opencv_frame = frame.to_ndarray(format="bgr24")
-                    # Save received frame every 100 frames
-                    if self.frame_count % 100 == 0:
-                        filename = f"received_frame_{self.frame_count}.png"
-                        cv2.imwrite(filename, opencv_frame)
-                    # logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
-                    pose_match = self.skill_match.checkMatchId(opencv_frame)
-                    # Send frame metadata as JSON if data channel exists and is open
-                    if self.data_channel and self.data_channel.readyState == "open":
-                        metadata = {
-                            "frame_number": self.frame_count,
-                            "timestamp": time.time(),
-                            "width": frame.width,
-                            "height": frame.height,
-                            "pose_match": int(pose_match)
-                        }
-                        self.data_channel.send(json.dumps(metadata))
+                    # opencv_frame = frame.to_ndarray(format="bgr24")
+                    # # Save received frame every 100 frames
+                    # # if self.frame_count % 100 == 0:
+                    # #     filename = f"received_frame_{self.frame_count}.png"
+                    # #     cv2.imwrite(filename, opencv_frame)
+                    # # logger.info(f"Pose targets: {self.pose_targets[id(self.pc)]}")
+                    # pose_match = self.skill_match.checkMatchId(opencv_frame)
+                    # # Send frame metadata as JSON if data channel exists and is open
+                    # if self.data_channel and self.data_channel.readyState == "open":
+                    #     metadata = {
+                    #         "frame_number": self.frame_count,
+                    #         "timestamp": time.time(),
+                    #         "width": frame.width,
+                    #         "height": frame.height,
+                    #         "pose_match": int(pose_match)
+                    #     }
+                    #     self.data_channel.send(json.dumps(metadata))
 
-                    self.frame_count += 1
+                    # self.frame_count += 1
                 except asyncio.CancelledError:
                     logger.info("Frame collection cancelled")
                     break
@@ -139,14 +139,28 @@ class VideoStreamTrack(MediaStreamTrack):
         """
         processed_frame = await self.pipeline.get_processed_video_frame()
 
+        if self.data_channel and self.data_channel.readyState == "open":
+            opencv_frame = processed_frame.to_ndarray(format="bgr24")
+            pose_match = self.skill_match.checkMatchId(opencv_frame)
+            metadata = {
+                "frame_number": self.frame_count,
+                "timestamp": time.time(),
+                "width": processed_frame.width,
+                "height": processed_frame.height,
+                "pose_match": int(pose_match)
+            }
+            self.data_channel.send(json.dumps(metadata))
+
+        self.frame_count += 1
+
         # Save processed frame every 100 frames
-        if self.frame_count % 100 == 0:
-            try:
-                opencv_frame = processed_frame.to_ndarray(format="bgr24")
-                filename = f"processed_frame_{self.frame_count}.png"
-                cv2.imwrite(filename, opencv_frame)
-            except Exception as e:
-                logger.error(f"Error saving processed frame: {str(e)}")
+        # if self.frame_count % 100 == 0:
+        #     try:
+        #         opencv_frame = processed_frame.to_ndarray(format="bgr24")
+        #         filename = f"processed_frame_{self.frame_count}.png"
+        #         cv2.imwrite(filename, opencv_frame)
+        #     except Exception as e:
+        #         logger.error(f"Error saving processed frame: {str(e)}")
 
         # Increment the frame count to calculate FPS.
         await self.fps_meter.increment_frame_count()
